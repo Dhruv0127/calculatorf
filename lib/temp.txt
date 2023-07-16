@@ -1,0 +1,381 @@
+
+// import 'package:flutter/material.dart';
+
+// class UnitConversionPage extends StatefulWidget {
+//   const UnitConversionPage({super.key});
+
+//   @override
+//   _UnitConversionPageState createState() => _UnitConversionPageState();
+// }
+
+// class _UnitConversionPageState extends State<UnitConversionPage> {
+//   double _inputValue = 0.0;
+//   double _outputValue = 0.0;
+//   String _selectedUnit = 'meters';
+//   final List<String> _units = ['meters', 'kilometers', 'miles', 'yards'];
+
+//   void _convertValue(double value, String unit) {
+//     double convertedValue = 0.0;
+
+//     switch (unit) {
+//       case 'meters':
+//         convertedValue = value;
+//         break;
+//       case 'kilometers':
+//         convertedValue = value * 1000;
+//         break;
+//       case 'miles':
+//         convertedValue = value * 1609.34;
+//         break;
+//       case 'yards':
+//         convertedValue = value * 0.9144;
+//         break;
+//     }
+
+//     setState(() {
+//       _outputValue = convertedValue;
+//     });
+//   }
+
+//   Widget _buildDropdownButton() {
+//     return DropdownButton<String>(
+//       value: _selectedUnit,
+//       onChanged: (String? newValue) {
+//         setState(() {
+//           _selectedUnit = newValue!;
+//           _convertValue(_inputValue, _selectedUnit);
+//         });
+//       },
+//       items: _units.map<DropdownMenuItem<String>>((String value) {
+//         return DropdownMenuItem<String>(
+//           value: value,
+//           child: Text(value),
+//         );
+//       }).toList(),
+//     );
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: const Text('Unit Conversion'),
+//       ),
+//       body: Padding(
+//         padding: const EdgeInsets.all(16.0),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.stretch,
+//           children: [
+//             TextField(
+//               onChanged: (value) {
+//                 double inputValue = double.tryParse(value) ?? 0.0;
+//                 _convertValue(inputValue, _selectedUnit);
+//                 setState(() {
+//                   _inputValue = inputValue;
+//                 });
+//               },
+//               keyboardType: TextInputType.number,
+//               decoration: const InputDecoration(
+//                 labelText: 'Input Value',
+//               ),
+//             ),
+//             const SizedBox(height: 16.0),
+//             _buildDropdownButton(),
+//             const SizedBox(height: 16.0),
+//             Text(
+//               'Output Value: $_outputValue',
+//               style:
+//                   const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+
+import 'package:flutter/material.dart';
+import 'package:units_converter/units_converter.dart';
+import 'package:flutter/services.dart';
+
+class ConverterPage extends StatefulWidget {
+  const ConverterPage({Key? key}) : super(key: key);
+
+  @override
+  _ConverterPageState createState() => _ConverterPageState();
+}
+
+class _ConverterPageState extends State<ConverterPage> {
+  TextEditingController _inputController;
+  ConversionNode<String> _conversionTree;
+  final List<String> _units = [
+    'Millimeter (mm)',
+    'Centimeter (cm)',
+    'Meter (m)',
+    'Kilometer (km)',
+    'Inch',
+    'Foot (ft)',
+    'Yard (yd)',
+    'Mile',
+    'Nautical Mile',
+    'Mil',
+  ];
+  String _fromUnit = 'Millimeter (mm)';
+  String _toUnit = 'Centimeter (cm)';
+  double _result = 0;
+  String _convertedValuesText = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _inputController = TextEditingController();
+    _conversionTree = ConversionNode(
+      name: 'Length',
+      leafNodes: [
+        ConversionNode(
+          name: 'Millimeter (mm)',
+          coefficientProduct: 1000,
+        ),
+        ConversionNode(
+          name: 'Centimeter (cm)',
+          coefficientProduct: 100,
+        ),
+        ConversionNode(
+          name: 'Meter (m)',
+          coefficientProduct: 1,
+        ),
+        ConversionNode(
+          name: 'Kilometer (km)',
+          coefficientProduct: 0.001,
+        ),
+        ConversionNode(
+          name: 'Inch',
+          coefficientProduct: 39.37,
+        ),
+        ConversionNode(
+          name: 'Foot (ft)',
+          coefficientProduct: 3.28,
+        ),
+        ConversionNode(
+          name: 'Yard (yd)',
+          coefficientProduct: 1.09,
+        ),
+        ConversionNode(
+          name: 'Mile',
+          coefficientProduct: 0.000621371,
+        ),
+        ConversionNode(
+          name: 'Nautical Mile',
+          coefficientProduct: 0.000539957,
+        ),
+        ConversionNode(
+          name: 'Mil',
+          coefficientProduct: 39370.1,
+        ),
+      ],
+    );
+    _inputController.addListener(_convert);
+  }
+
+  @override
+  void dispose() {
+    _inputController.dispose();
+    super.dispose();
+  }
+
+  void _convert() {
+    final inputText = _inputController.text;
+    if (inputText.isNotEmpty) {
+      final double inputValue = double.parse(inputText);
+      final CustomProperty converter = CustomProperty(
+        conversionTree: _conversionTree,
+        name: 'Length Converter',
+      );
+
+      converter.convert(_fromUnit, inputValue);
+      final Unit convertedUnit = converter.getUnit(_toUnit);
+      setState(() {
+        _result = convertedUnit.value!;
+        _convertedValuesText = _getConvertedValuesText(converter);
+      });
+    } else {
+      setState(() {
+        _result = 0;
+        _convertedValuesText = '';
+      });
+    }
+  }
+
+  String _getConvertedValuesText(CustomProperty converter) {
+    final List<String> convertedValues = _units.map((unit) {
+      final Unit convertedUnit = converter.getUnit(unit);
+      final convertedValue = convertedUnit.value?.toStringAsFixed(4);
+      return '$unit: $convertedValue';
+    }).toList();
+    return convertedValues.join('\n');
+  }
+
+  void _swapUnits() {
+    setState(() {
+      final String temp = _fromUnit;
+      _fromUnit = _toUnit;
+      _toUnit = temp;
+    });
+    _convert();
+  }
+
+  void _convertToAll() {
+    final double inputValue = double.tryParse(_inputController.text) ?? 0;
+
+    if (inputValue == 0) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Value Required'),
+          content: const Text('Please enter a value.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final CustomProperty converter = CustomProperty(
+      conversionTree: _conversionTree,
+      name: 'Length Converter',
+    );
+
+    converter.convert(_fromUnit, inputValue);
+    setState(() {
+      _result = inputValue;
+      _convertedValuesText = _getConvertedValuesText(converter);
+    });
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              const Text('Converted Values'),
+              IconButton(
+                icon: const Icon(Icons.copy),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: _convertedValuesText));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Copied to clipboard')),
+                  );
+                },
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Text(
+              _convertedValuesText,
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Converter'),
+        actions: [
+          IconButton(
+            onPressed: _convertToAll,
+            icon: const Icon(Icons.calculate),
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: _inputController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Enter a value',
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _fromUnit,
+                    items: _units.map((unit) {
+                      return DropdownMenuItem<String>(
+                        value: unit,
+                        child: Text(unit),
+                      );
+                    }).toList(),
+                    onChanged: (selectedUnit) {
+                      setState(() {
+                        _fromUnit = selectedUnit!;
+                      });
+                      _convert();
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'From',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                IconButton(
+                  onPressed: _swapUnits,
+                  icon: const Icon(Icons.swap_horiz),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _toUnit,
+                    items: _units.map((unit) {
+                      return DropdownMenuItem<String>(
+                        value: unit,
+                        child: Text(unit),
+                      );
+                    }).toList(),
+                    onChanged: (selectedUnit) {
+                      setState(() {
+                        _toUnit = selectedUnit!;
+                      });
+                      _convert();
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'To',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Result: $_result',
+              style: const TextStyle(fontSize: 24),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
