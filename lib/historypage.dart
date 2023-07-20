@@ -44,13 +44,22 @@ class HistoryPage extends StatelessWidget {
                 padding: const EdgeInsets.all(8.0),
                 child: Container(
                   decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 135, 160, 183),
-                      borderRadius: BorderRadius.circular(20)),
+                      border: Border.all(
+                          color: const Color.fromARGB(255, 127, 127, 127)),
+                      color: const Color.fromARGB(255, 229, 229, 229),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: const [
+                        BoxShadow(
+                            offset: Offset(1, 1),
+                            color: Color.fromARGB(77, 2, 253, 240),
+                            blurRadius: 5,
+                            spreadRadius: 1)
+                      ]),
                   child: Dismissible(
                     key: Key('$equation'),
                     direction: DismissDirection.endToStart,
                     background: Container(
-                      color: Colors.red,
+                      color: const Color.fromARGB(255, 255, 0, 0),
                       alignment: Alignment.centerRight,
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: const Icon(
@@ -65,7 +74,7 @@ class HistoryPage extends StatelessWidget {
                         onPressed: () => removeHistory(index),
                         icon: const Icon(
                           Icons.delete,
-                          color: Color.fromARGB(255, 138, 15, 6),
+                          color: Color.fromARGB(255, 255, 17, 0),
                         ),
                       ),
                     ),
